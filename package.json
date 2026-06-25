@@ -15,6 +15,8 @@
     "emulator:list": "$ANDROID_HOME/emulator/emulator -list-avds",
     "emulator": "$ANDROID_HOME/emulator/emulator -avd Pixel_8_API_32 &",
     "android:boot-wait": "$ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [ -z \"$(getprop sys.boot_completed)\" ]; do sleep 2; done && echo emulator ready'",
-    "android:dev": "pnpm emulator && pnpm android:boot-wait && pnpm android"
+    "android:dev": "pnpm emulator && pnpm android:boot-wait && pnpm android",
+    "health": "bash scripts/healthcheck.sh",
+    "health:android": "bash scripts/healthcheck.sh --android"
   }
 }

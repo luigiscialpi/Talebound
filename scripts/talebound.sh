@@ -159,6 +159,19 @@ pulisci_cache() {
 }
 
 # --------------------------------------------------------------------------- #
+# 10. Health-check progetto (lint/typecheck/doctor/outdated)
+# --------------------------------------------------------------------------- #
+healthcheck() {
+    log_info "Eseguo health-check rapido..."
+    (cd "$REPO_ROOT" && bash scripts/healthcheck.sh)
+}
+
+healthcheck_android() {
+    log_info "Eseguo health-check completo con check Gradle..."
+    (cd "$REPO_ROOT" && bash scripts/healthcheck.sh --android)
+}
+
+# --------------------------------------------------------------------------- #
 # Funzione interna: avvia emulatore con selezione interattiva
 # --------------------------------------------------------------------------- #
 _avvia_emulatore() {
@@ -252,6 +265,8 @@ echo "  6) Pulisci build Android       (gradlew clean)"
 echo "  7) Pulisci Android - HARDCORE  (svuota anche ~/.gradle)"
 echo "  8) Typecheck monorepo"
 echo "  9) Pulisci cache pnpm / Metro"
+echo " 10) Health-check rapido       (lint + typecheck + doctor + outdated)"
+echo " 11) Health-check completo     (+ check Gradle warning-mode all)"
 echo ""
 read -rp "Scelta: " scelta_menu
 
@@ -265,5 +280,7 @@ case "$scelta_menu" in
     7) pulisci_android_hardcore ;;
     8) typecheck ;;
     9) pulisci_cache ;;
+   10) healthcheck ;;
+   11) healthcheck_android ;;
     *) log_errore "Scelta non valida."; exit 1 ;;
 esac
