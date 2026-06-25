@@ -6,7 +6,6 @@
     "scheme": "talebound",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "android": {
       "package": "com.talebound.app",
       "adaptiveIcon": {

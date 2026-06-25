@@ -16,8 +16,7 @@ export default function HomeScreen() {
         </Pressable>
 
         <Text style={styles.hint}>
-          Modifica questo file e salva: vedrai l'aggiornamento all'istante
-          grazie al Fast Refresh di Metro.
+          {"Modifica questo file e salva: vedrai l'aggiornamento all'istante grazie al Fast Refresh di Metro."}
         </Text>
       </View>
     </SafeAreaView>
