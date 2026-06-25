@@ -25,7 +25,7 @@ Fase: **scaffolding del monorepo completato e verificato**.
 - [x] Emulatore Android Studio + prima dev build (Pixel 10)
 - [ ] Account cloud (Supabase, Firebase, AI keys) + `.env`
 - [~] Schema DB Supabase v1 core (migration + RLS scritte, da applicare al progetto)
-- [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con wiring cache+breaker e adapter Groq (retry/timeout) testati. Restano i pezzi cloud-dipendenti: integrazione runtime con `.env`/provider reali nell'orchestratore AI end-to-end, rate limiter Redis su `user_id`
+- [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con adapter Groq (retry/timeout) e wiring runtime endpoint `POST /guardrail/check`. Restano i pezzi cloud-dipendenti: integrazione nell'orchestratore AI completo (`/game/action`), rate limiter Redis su `user_id`
 
 ---
 
@@ -65,6 +65,20 @@ pnpm backend:dev
 | `pnpm backend:dev` | Avvia il backend in watch (tsx) |
 | `pnpm typecheck` | Typecheck di tutto il monorepo |
 | `pnpm lint` | Lint di tutto il monorepo |
+
+Smoke test guardrail runtime (con backend avviato):
+
+```bash
+curl -sS -X POST http://localhost:3000/guardrail/check \
+  -H 'content-type: application/json' \
+  -d '{
+    "campaignId":"demo-1",
+    "campaignTitle":"La Torre Nera",
+    "campaignGenre":"fantasy",
+    "campaignLanguage":"it",
+    "input":"apro la porta"
+  }'
+```
 
 ---
 
