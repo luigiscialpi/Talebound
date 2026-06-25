@@ -1,0 +1,2 @@
+# Talebound
+Avventure testuali GenAI
