@@ -25,7 +25,7 @@ Fase: **scaffolding del monorepo completato e verificato**.
 - [x] Emulatore Android Studio + prima dev build (Pixel 10)
 - [ ] Account cloud (Supabase, Firebase, AI keys) + `.env`
 - [~] Schema DB Supabase v1 core (migration + RLS scritte, da applicare al progetto)
-- [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9). Restano i pezzi cloud-dipendenti: chiamata Groq e integrazione orchestratore AI end-to-end, rate limiter Redis su `user_id`
+- [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con wiring cache+breaker e adapter Groq (retry/timeout) testati. Restano i pezzi cloud-dipendenti: integrazione runtime con `.env`/provider reali nell'orchestratore AI end-to-end, rate limiter Redis su `user_id`
 
 ---
 
@@ -116,10 +116,9 @@ Talebound/
 2. **Schema DB** → migration v1 core in `supabase/migrations/` (users, campaigns,
    rooms, room_translations, save_slots, ai_logs + RLS). Da applicare al progetto
    Supabase (step 2). Tabelle v2/v3 (community, co-op, world-builder) differite.
-3. **Guardrail cloud-dipendente** → dopo i cloud key (step 1): chiamata classificatore
-  Groq (con `parseClassifierResponse`, circuit breaker e LRU cache già pronti),
-  integrazione orchestratore AI end-to-end, rate limiter su `user_id`
-  (Redis sliding window).
+3. **Guardrail cloud-dipendente** → dopo i cloud key (step 1): integrazione runtime
+  del classificatore Groq nell'orchestratore AI (adapter e servizio già pronti),
+  rate limiter su `user_id` (Redis sliding window), observability/alerting reali.
 
 ---
 
