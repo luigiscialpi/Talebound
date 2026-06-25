@@ -21,7 +21,7 @@ Fase: **scaffolding del monorepo completato e verificato**.
 - [ ] Emulatore Android Studio + prima dev build
 - [ ] Account cloud (Supabase, Firebase, AI keys) + `.env`
 - [~] Schema DB Supabase v1 core (migration + RLS scritte, da applicare al progetto)
-- [~] Guardrail input: L0 pre-filtro implementato in TDD (L2/output/orchestratore da fare)
+- [~] Guardrail: L0, output, sanitizer canonical e parser L2 implementati in TDD (chiamata classificatore/circuit breaker/cache/orchestratore da fare con i cloud key)
 
 ---
 
@@ -113,7 +113,10 @@ Talebound/
 3. **Schema DB** → migration v1 core in `supabase/migrations/` (users, campaigns,
    rooms, room_translations, save_slots, ai_logs + RLS). Da applicare al progetto
    Supabase (step 2). Tabelle v2/v3 (community, co-op, world-builder) differite.
-4. **Guardrail** → implementare L0/L2/output con TDD (doc §13, test-first obbligatorio).
+4. **Guardrail** → logica pura completata in TDD: L0 (§2), output guardrail (§5),
+   sanitizer canonical anti-injection indiretta (§6), parser classificatore L2
+   fail-closed (§4). Restano i pezzi che richiedono i cloud key (step 2): chiamata
+   classificatore Groq, circuit breaker, LRU cache, orchestratore AI, rate limiter.
 
 ---
 
