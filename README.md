@@ -20,7 +20,8 @@ Fase: **scaffolding del monorepo completato e verificato**.
 - [x] Metro verificato (dev server su `:8081`)
 - [ ] Emulatore Android Studio + prima dev build
 - [ ] Account cloud (Supabase, Firebase, AI keys) + `.env`
-- [ ] Schema DB Supabase (migration + RLS)
+- [~] Schema DB Supabase v1 core (migration + RLS scritte, da applicare al progetto)
+- [~] Guardrail input: L0 pre-filtro implementato in TDD (L2/output/orchestratore da fare)
 
 ---
 
@@ -79,6 +80,8 @@ Talebound/
 │       └── .env.example
 ├── packages/
 │   └── shared/          # Tipi TS condivisi (@talebound/shared)
+├── supabase/
+│   └── migrations/      # 0001 schema core v1, 0002 policy RLS
 ├── docs/                # Documentazione tecnica
 ├── pnpm-workspace.yaml
 └── .npmrc               # node-linker=hoisted (necessario per Metro + pnpm)
@@ -107,7 +110,9 @@ Talebound/
 1. **Emulatore Android** → AVD API 34+, poi `pnpm android` per la prima dev build.
 2. **Account cloud** → progetti Supabase + Firebase, API key AI (Gemini/Groq/Cerebras),
    compilare `apps/backend/.env`.
-3. **Schema DB** → tradurre le tabelle della doc (§19) in migration SQL + RLS.
+3. **Schema DB** → migration v1 core in `supabase/migrations/` (users, campaigns,
+   rooms, room_translations, save_slots, ai_logs + RLS). Da applicare al progetto
+   Supabase (step 2). Tabelle v2/v3 (community, co-op, world-builder) differite.
 4. **Guardrail** → implementare L0/L2/output con TDD (doc §13, test-first obbligatorio).
 
 ---
@@ -144,3 +149,23 @@ Agenti (`.github/agents/`):
 
 - **Talebound Dev** — agente principale: Lazy Senior + metodologia RLM "Divide et
   Impera", consapevole del monorepo, si appoggia alle skill di dominio.
+
+---
+
+## Come riprendere il lavoro in una nuova chat
+
+Tutto il contesto di progetto vive nel repo, quindi nello **stesso workspace** non
+serve allegare quasi nulla:
+
+- `.github/copilot-instructions.md`, le skill in `.github/skills/` e l'agente
+  **Talebound Dev** si caricano/attivano da soli.
+- La doc tecnica (`docs/Talebound_Architettura_completa.md`) **non** viene caricata
+  a ogni messaggio: l'agente la legge in autonomia, solo la sezione che gli serve,
+  quando il task lo richiede.
+
+Passi pratici nella nuova chat:
+
+1. Seleziona l'agente **Talebound Dev** dal menu modalità.
+2. Scrivi da dove riprendere, es. *"Riprendi da README.md, prossimo step: schema DB"*.
+3. Solo se lavori in un **altro workspace o su un'altra macchina**, allega la cartella
+   `.github/` e i file in `docs/` (altrimenti non sono disponibili).
