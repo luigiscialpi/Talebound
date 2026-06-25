@@ -2,6 +2,7 @@ import express from "express";
 import { z } from "zod";
 import { config } from "./config.js";
 import { createRuntimeNarrator } from "./ai/runtime-narrator.js";
+import { InMemoryGameStore } from "./game/in-memory-game-store.js";
 import { checkInputGuardrail } from "./guardrail/input-guardrail.js";
 import {
   getGuardrailBlockMessage,
@@ -31,6 +32,8 @@ const userRateLimiter = new UserRateLimiter({
   maxRequests: config.RATE_LIMIT_MAX_REQUESTS,
 });
 
+const gameStore = new InMemoryGameStore();
+
 const guardrailCheckRequestSchema = z.object({
   campaignId: z.string().min(1),
   campaignTitle: z.string().min(1),
@@ -48,6 +51,16 @@ const gameActionRequestSchema = z.object({
   campaignTitle: z.string().min(1),
   campaignGenre: z.string().min(1),
   campaignLanguage: z.string().min(1),
+});
+
+const gameNewRequestSchema = z.object({
+  userId: z.string().min(1),
+  slotId: z.string().min(1),
+  campaignId: z.string().min(1),
+});
+
+const gameStateQuerySchema = z.object({
+  userId: z.string().min(1),
 });
 
 app.get("/health", (_req, res) => {
@@ -88,15 +101,29 @@ app.post("/game/action", async (req, res) => {
 
   const payload = parsed.data;
 
+  const cached = gameStore.getIdempotentResponse(payload.userId, payload.requestId);
+  if (cached) {
+    return res.status(200).json({ ...cached, idempotentReplay: true });
+  }
+
+  const state = gameStore.getOrCreateSlot(
+    payload.userId,
+    payload.slotId,
+    payload.campaignId,
+  );
+
   if (!userRateLimiter.tryConsume(payload.userId)) {
-    return res.status(429).json({
+    const response = {
       slotId: payload.slotId,
       requestId: payload.requestId,
       blocked: true,
       reason: "RATE_LIMIT",
       stage: "pre_guardrail",
       narrative: getRateLimitMessage(payload.campaignLanguage),
-    });
+      gameState: state,
+    };
+    gameStore.saveIdempotentResponse(payload.userId, payload.requestId, response);
+    return res.status(429).json(response);
   }
 
   const decision = await checkInputGuardrail(payload.action, (input) =>
@@ -110,7 +137,7 @@ app.post("/game/action", async (req, res) => {
   );
 
   if (!decision.allowed) {
-    return res.status(200).json({
+    const response = {
       slotId: payload.slotId,
       requestId: payload.requestId,
       blocked: true,
@@ -120,7 +147,10 @@ app.post("/game/action", async (req, res) => {
         decision.reason ?? "PARSE_ERROR",
         payload.campaignLanguage,
       ),
-    });
+      gameState: state,
+    };
+    gameStore.saveIdempotentResponse(payload.userId, payload.requestId, response);
+    return res.status(200).json(response);
   }
 
   const narrator = await runtimeNarrator.narrate({
@@ -130,7 +160,9 @@ app.post("/game/action", async (req, res) => {
     campaignLanguage: payload.campaignLanguage,
   });
 
-  return res.status(200).json({
+  const updatedState = gameStore.applySuccessfulTurn(payload.userId, payload.slotId);
+
+  const response = {
     slotId: payload.slotId,
     requestId: payload.requestId,
     blocked: false,
@@ -138,6 +170,52 @@ app.post("/game/action", async (req, res) => {
     provider: narrator.provider,
     outputGuardrailTriggered: narrator.outputGuardrailTriggered,
     outputGuardrailPattern: narrator.outputGuardrailPattern,
+    gameState: updatedState,
+  };
+
+  gameStore.saveIdempotentResponse(payload.userId, payload.requestId, response);
+  return res.status(200).json(response);
+});
+
+app.post("/game/new", (req, res) => {
+  const parsed = gameNewRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: "BAD_REQUEST",
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const payload = parsed.data;
+  const state = gameStore.startNewGame(
+    payload.userId,
+    payload.slotId,
+    payload.campaignId,
+  );
+
+  return res.status(200).json({
+    slotId: payload.slotId,
+    gameState: state,
+  });
+});
+
+app.get("/game/state/:slotId", (req, res) => {
+  const query = gameStateQuerySchema.safeParse(req.query);
+  if (!query.success) {
+    return res.status(400).json({
+      error: "BAD_REQUEST",
+      details: query.error.flatten(),
+    });
+  }
+
+  const state = gameStore.getSlot(query.data.userId, req.params.slotId);
+  if (!state) {
+    return res.status(404).json({ error: "SLOT_NOT_FOUND" });
+  }
+
+  return res.status(200).json({
+    slotId: req.params.slotId,
+    gameState: state,
   });
 });
 
