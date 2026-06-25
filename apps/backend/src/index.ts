@@ -1,6 +1,7 @@
 import express from "express";
 import { z } from "zod";
 import { config } from "./config.js";
+import { createRuntimeNarrator } from "./ai/runtime-narrator.js";
 import { checkInputGuardrail } from "./guardrail/input-guardrail.js";
 import { getGuardrailBlockMessage } from "./guardrail/block-messages.js";
 import { createRuntimeClassifier } from "./guardrail/runtime-classifier.js";
@@ -15,6 +16,10 @@ const runtimeClassifier = createRuntimeClassifier({
     // Temporary console logging for MVP observability.
     console.warn("[guardrail] classifier circuit breaker opened");
   },
+});
+
+const runtimeNarrator = createRuntimeNarrator({
+  groqApiKey: config.GROQ_API_KEY,
 });
 
 const guardrailCheckRequestSchema = z.object({
@@ -96,15 +101,21 @@ app.post("/game/action", async (req, res) => {
     });
   }
 
-  // MVP scaffold: guardrail is active, narrator orchestration will be wired next.
-  return res.status(202).json({
+  const narrator = await runtimeNarrator.narrate({
+    action: payload.action,
+    campaignTitle: payload.campaignTitle,
+    campaignGenre: payload.campaignGenre,
+    campaignLanguage: payload.campaignLanguage,
+  });
+
+  return res.status(200).json({
     slotId: payload.slotId,
     requestId: payload.requestId,
     blocked: false,
-    narrative:
-      payload.campaignLanguage.toLowerCase().startsWith("it")
-        ? "Azione ricevuta. Il Narratore sta per rispondere."
-        : "Action received. The Narrator is preparing a response.",
+    narrative: narrator.narrative,
+    provider: narrator.provider,
+    outputGuardrailTriggered: narrator.outputGuardrailTriggered,
+    outputGuardrailPattern: narrator.outputGuardrailPattern,
   });
 });
 
