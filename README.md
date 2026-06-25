@@ -18,10 +18,14 @@ Fase: **scaffolding del monorepo completato e verificato**.
 - [x] Backend: Express 5 + TypeScript + config validato con Zod
 - [x] Package condiviso `@talebound/shared` (tipi TS)
 - [x] Metro verificato (dev server su `:8081`)
+- [x] ESLint mobile configurato (flat config + eslint-config-expo)
+- [x] Script `talebound.sh` — menu bootstrap/avvio interattivo in italiano
+- [x] Script `scripts/healthcheck.sh` — lint + typecheck + expo doctor (19/19) in un colpo
+- [x] Android CLI (`emulator:list`, `emulator`, `android:dev`) in `package.json`
 - [ ] Emulatore Android Studio + prima dev build
 - [ ] Account cloud (Supabase, Firebase, AI keys) + `.env`
 - [~] Schema DB Supabase v1 core (migration + RLS scritte, da applicare al progetto)
-- [~] Guardrail: L0, output, sanitizer canonical e parser L2 implementati in TDD (chiamata classificatore/circuit breaker/cache/orchestratore da fare con i cloud key)
+- [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4). Restano i pezzi cloud-dipendenti: chiamata Groq, circuit breaker, LRU cache, rate limiter
 
 ---
 
@@ -107,16 +111,16 @@ Talebound/
 
 ## Prossimi passi suggeriti
 
-1. **Emulatore Android** → AVD API 34+, poi `pnpm android` per la prima dev build.
+1. **Emulatore Android** → AVD API 34+ già presente (`Pixel_8_API_32`),
+   eseguire `pnpm android` per la prima dev build.
 2. **Account cloud** → progetti Supabase + Firebase, API key AI (Gemini/Groq/Cerebras),
    compilare `apps/backend/.env`.
 3. **Schema DB** → migration v1 core in `supabase/migrations/` (users, campaigns,
    rooms, room_translations, save_slots, ai_logs + RLS). Da applicare al progetto
    Supabase (step 2). Tabelle v2/v3 (community, co-op, world-builder) differite.
-4. **Guardrail** → logica pura completata in TDD: L0 (§2), output guardrail (§5),
-   sanitizer canonical anti-injection indiretta (§6), parser classificatore L2
-   fail-closed (§4). Restano i pezzi che richiedono i cloud key (step 2): chiamata
-   classificatore Groq, circuit breaker, LRU cache, orchestratore AI, rate limiter.
+4. **Guardrail cloud-dipendente** → dopo i cloud key (step 2): chiamata classificatore
+   Groq (con `parseClassifierResponse` già pronto), circuit breaker, LRU cache
+   (`getCacheKey`), rate limiter su `user_id` (Redis sliding window).
 
 ---
 
