@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Talebound",
+    "slug": "talebound",
+    "version": "0.1.0",
+    "scheme": "talebound",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.talebound.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0B14"
+      }
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.talebound.app"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
