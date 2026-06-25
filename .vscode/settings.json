@@ -1,0 +1,9 @@
+{
+  "chat.tools.terminal.autoApprove": {
+    "pnpm": true,
+    "npx --no-install expo": true,
+    "eas": true,
+    "java": true,
+    "watchman": true
+  }
+}

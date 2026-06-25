@@ -1,0 +1,36 @@
+# OS
+.DS_Store
+.DS_STORE
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Expo
+.expo/
+.expo-shared/
+*.orig.*
+web-build/
+
+# Native (generati da prebuild)
+apps/mobile/android/
+apps/mobile/ios/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# IDE
+*.swp
