@@ -25,7 +25,7 @@ Fase: **scaffolding del monorepo completato e verificato**.
 - [x] Emulatore Android Studio + prima dev build (Pixel 10)
 - [ ] Account cloud (Supabase, Firebase, AI keys) + `.env`
 - [~] Schema DB Supabase v1 core (migration + RLS scritte, da applicare al progetto)
-- [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con adapter Groq (retry/timeout) e wiring runtime su endpoint `POST /guardrail/check` e `POST /game/action` (scaffold guardrail-first). Restano i pezzi cloud-dipendenti: narratore AI end-to-end su `/game/action`, rate limiter Redis su `user_id`
+- [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con adapter Groq (retry/timeout), wiring runtime su endpoint `POST /guardrail/check` e endpoint `POST /game/action` con narratore runtime minimo + output guardrail. Restano i pezzi cloud-dipendenti: orchestratore narratore completo multi-provider e integrazione state manager DB, rate limiter Redis su `user_id`
 
 ---
 
@@ -80,7 +80,7 @@ curl -sS -X POST http://localhost:3000/guardrail/check \
   }'
 ```
 
-Smoke test endpoint di gioco scaffold (guardrail attivo):
+Smoke test endpoint di gioco (guardrail + narratore runtime minimo):
 
 ```bash
 curl -sS -X POST http://localhost:3000/game/action \
@@ -147,8 +147,9 @@ Talebound/
    rooms, room_translations, save_slots, ai_logs + RLS). Da applicare al progetto
    Supabase (step 2). Tabelle v2/v3 (community, co-op, world-builder) differite.
 3. **Guardrail cloud-dipendente** → dopo i cloud key (step 1): completare `/game/action`
-  con narratore AI end-to-end (oggi e uno scaffold guardrail-first), aggiungere
-  rate limiter su `user_id` (Redis sliding window), observability/alerting reali.
+  con orchestratore narratore completo (Gemini -> Groq -> Cerebras + cache),
+  integrazione state manager DB, rate limiter su `user_id` (Redis sliding window),
+  observability/alerting reali.
 
 ---
 
