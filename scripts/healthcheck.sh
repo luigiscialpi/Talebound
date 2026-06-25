@@ -38,7 +38,7 @@ run_step() {
   local command="$2"
 
   log_info "$title"
-  if bash -lc "cd '$REPO_ROOT' && $command"; then
+  if (cd "$REPO_ROOT" && eval "$command"); then
     log_ok "$title"
     return 0
   fi
@@ -60,7 +60,7 @@ main() {
   run_step "Lint mobile (expo lint)" "pnpm --filter @talebound/mobile lint" || failed=1
   run_step "Typecheck monorepo" "pnpm typecheck" || failed=1
 
-  run_step "Expo Doctor" "pnpm --filter @talebound/mobile exec expo-doctor" || failed=1
+  run_step "Expo Doctor" "pnpm --filter @talebound/mobile exec npx --yes expo-doctor" || failed=1
 
   log_info "Dipendenze obsolete (report informativo)"
   if bash -lc "cd '$REPO_ROOT' && pnpm -r outdated"; then
