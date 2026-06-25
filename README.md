@@ -23,7 +23,10 @@ Fase: **scaffolding del monorepo completato e verificato**.
 - [x] Script `scripts/healthcheck.sh` — lint + typecheck + expo doctor (19/19) in un colpo
 - [x] Android CLI (`emulator:list`, `emulator`, `android:dev`) in `package.json`
 - [x] Emulatore Android Studio + prima dev build (Pixel 10)
-- [ ] Account cloud (Supabase, Firebase, AI keys) + `.env`
+- [x] Provider AI runtime: **Groq** configurato e verificato end-to-end
+  (classificatore L2 + narratore runtime rispondono live; `provider:"groq"`)
+- [~] Account cloud (Supabase, Firebase, AI keys) + `.env` — Groq attivo, restano
+  Gemini/Cerebras (multi-provider) e Supabase/Firebase
 - [~] Schema DB Supabase v1 core (migration + RLS scritte, da applicare al progetto)
 - [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con adapter Groq (retry/timeout), wiring runtime su endpoint `POST /guardrail/check` e endpoint `POST /game/action` con narratore runtime minimo + output guardrail + rate limiter su `user_id` (sliding window in-memory, upgrade path Redis). Restano i pezzi cloud-dipendenti: orchestratore narratore completo multi-provider e integrazione state manager DB, rate limiter Redis condiviso multi-istanza
 
@@ -55,8 +58,16 @@ pnpm android
 
 # Backend (in un altro terminale)
 cp apps/backend/.env.example apps/backend/.env   # poi compila i valori
-pnpm backend:dev
+# Il backend NON carica .env da solo: sorgilo prima di avviare
+set -a && source apps/backend/.env && set +a && pnpm backend:dev
 ```
+
+> **Chiavi AI minime per il runtime**: basta `GROQ_API_KEY` (free, da
+> [console.groq.com](https://console.groq.com)) per far girare classificatore e
+> narratore. ATTENZIONE: Groq (`api.groq.com`) **non** e Grok/xAI (`api.x.ai`):
+> sono provider diversi, il piano (doc §10) usa Groq + Gemini.
+> In dev locale `CLASSIFIER_TIMEOUT_MS=300` puo essere troppo stretto per il
+> round-trip verso Groq US: alzalo (es. `2000`) nel tuo `.env` se vedi `PARSE_ERROR`.
 
 | Comando | Effetto |
 |---|---|
@@ -153,13 +164,19 @@ Talebound/
 - **Reanimated 4**: il plugin Babel è `react-native-worklets/plugin`
   (non `react-native-reanimated/plugin`).
 - **Secret**: mai committare `.env`. Solo `.env.example` è versionato.
+- **Backend non carica `.env` da solo**: va sorgento prima dell'avvio
+  (`set -a && source apps/backend/.env && set +a && pnpm backend:dev`).
+- **Processo backend orfano su `:3000`**: chiudere il terminale non sempre uccide
+  il child node di `tsx watch`. Se edit/riavvii non hanno effetto (il server
+  risponde con codice/config vecchi), cerca l'orfano con
+  `lsof -nP -iTCP:3000 -sTCP:LISTEN`, poi `kill <PID>` prima di riavviare.
 
 ---
 
 ## Prossimi passi suggeriti
 
-1. **Account cloud** → progetti Supabase + Firebase, API key AI (Gemini/Groq/Cerebras),
-   compilare `apps/backend/.env`.
+1. **Account cloud** → progetti Supabase + Firebase, restanti API key AI
+   (Gemini/Cerebras; Groq già attivo), compilare `apps/backend/.env`.
 2. **Schema DB** → migration v1 core in `supabase/migrations/` (users, campaigns,
    rooms, room_translations, save_slots, ai_logs + RLS). Da applicare al progetto
    Supabase (step 2). Tabelle v2/v3 (community, co-op, world-builder) differite.
