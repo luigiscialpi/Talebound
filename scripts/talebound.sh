@@ -27,7 +27,9 @@ setup_nvm() {
     # shellcheck source=/dev/null
     [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
     if command -v nvm &>/dev/null; then
-        nvm use 20 2>/dev/null || nvm install 20
+        # Redirect stdin from /dev/null: nvm can consume characters the user
+        # has already typed ahead, causing the menu read to get an empty value.
+        nvm use 20 </dev/null 2>/dev/null || nvm install 20 </dev/null
     else
         log_warn "nvm non trovato. Assicurati di usare Node 20 (node --version)."
     fi
