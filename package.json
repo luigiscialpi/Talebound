@@ -11,6 +11,10 @@
     "android": "pnpm --filter @talebound/mobile android",
     "backend:dev": "pnpm --filter @talebound/backend dev",
     "typecheck": "pnpm -r typecheck",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "emulator:list": "$ANDROID_HOME/emulator/emulator -list-avds",
+    "emulator": "$ANDROID_HOME/emulator/emulator -avd Pixel_8_API_32 &",
+    "android:boot-wait": "$ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [ -z \"$(getprop sys.boot_completed)\" ]; do sleep 2; done && echo emulator ready'",
+    "android:dev": "pnpm emulator && pnpm android:boot-wait && pnpm android"
   }
 }
