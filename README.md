@@ -66,6 +66,15 @@ pnpm backend:dev
 | `pnpm typecheck` | Typecheck di tutto il monorepo |
 | `pnpm lint` | Lint di tutto il monorepo |
 
+Endpoint backend runtime disponibili (MVP scaffolding):
+
+| Metodo | Endpoint | Note |
+|---|---|---|
+| `POST` | `/guardrail/check` | Solo decisione guardrail input |
+| `POST` | `/game/new` | Inizializza/resetta slot in-memory |
+| `GET` | `/game/state/:slotId?userId=...` | Legge stato slot in-memory |
+| `POST` | `/game/action` | Guardrail + narratore runtime + update stato + idempotency |
+
 Smoke test guardrail runtime (con backend avviato):
 
 ```bash
@@ -96,6 +105,13 @@ curl -sS -X POST http://localhost:3000/game/action \
     "campaignLanguage":"it"
   }'
 ```
+
+Note `/game/action`:
+
+- `requestId` e idempotente per `userId`: retry con lo stesso `requestId`
+  restituisce la stessa risposta (`idempotentReplay: true`) senza doppio turno.
+- Stato slot attuale e in-memory (persistenza temporanea): verra sostituito da
+  StateManager su Supabase nelle fasi cloud successive.
 
 ---
 
