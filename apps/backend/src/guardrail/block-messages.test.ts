@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { getGuardrailBlockMessage } from "./block-messages.js";
+import { getGuardrailBlockMessage, getRateLimitMessage } from "./block-messages.js";
 
 test("ritorna messaggio italiano quando language e it", () => {
   const msg = getGuardrailBlockMessage("OFF_TOPIC", "it");
@@ -16,4 +16,14 @@ test("ritorna messaggio inglese quando language non e it", () => {
 test("language case-insensitive", () => {
   const msg = getGuardrailBlockMessage("PARSE_ERROR", "IT-IT");
   assert.match(msg, /Il Narratore ha difficolta a comprendere/);
+});
+
+test("messaggio rate-limit italiano", () => {
+  const msg = getRateLimitMessage("it");
+  assert.match(msg, /Il Narratore e occupato/);
+});
+
+test("messaggio rate-limit inglese", () => {
+  const msg = getRateLimitMessage("en");
+  assert.match(msg, /Narrator is busy/);
 });

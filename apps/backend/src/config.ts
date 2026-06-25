@@ -25,6 +25,8 @@ const configSchema = z.object({
   SLACK_WEBHOOK_URL: z.string().url().optional(),
   MAX_INPUT_LENGTH: z.coerce.number().default(500),
   CLASSIFIER_TIMEOUT_MS: z.coerce.number().default(300),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(20),
 });
 
 export const config = configSchema.parse(process.env);

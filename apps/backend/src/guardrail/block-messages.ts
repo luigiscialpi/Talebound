@@ -42,3 +42,11 @@ export function getGuardrailBlockMessage(
   const isItalian = language.toLowerCase().startsWith("it");
   return isItalian ? IT_MESSAGES[reason] : EN_MESSAGES[reason];
 }
+
+/** Return localized narrative-safe message for rate-limit blocks. */
+export function getRateLimitMessage(language: string): string {
+  const isItalian = language.toLowerCase().startsWith("it");
+  return isItalian
+    ? "Il Narratore e occupato. Riprova tra qualche istante."
+    : "The Narrator is busy. Try again in a moment.";
+}

@@ -3,8 +3,12 @@ import { z } from "zod";
 import { config } from "./config.js";
 import { createRuntimeNarrator } from "./ai/runtime-narrator.js";
 import { checkInputGuardrail } from "./guardrail/input-guardrail.js";
-import { getGuardrailBlockMessage } from "./guardrail/block-messages.js";
+import {
+  getGuardrailBlockMessage,
+  getRateLimitMessage,
+} from "./guardrail/block-messages.js";
 import { createRuntimeClassifier } from "./guardrail/runtime-classifier.js";
+import { UserRateLimiter } from "./guardrail/user-rate-limiter.js";
 
 const app = express();
 app.use(express.json());
@@ -22,6 +26,11 @@ const runtimeNarrator = createRuntimeNarrator({
   groqApiKey: config.GROQ_API_KEY,
 });
 
+const userRateLimiter = new UserRateLimiter({
+  windowMs: config.RATE_LIMIT_WINDOW_MS,
+  maxRequests: config.RATE_LIMIT_MAX_REQUESTS,
+});
+
 const guardrailCheckRequestSchema = z.object({
   campaignId: z.string().min(1),
   campaignTitle: z.string().min(1),
@@ -31,6 +40,7 @@ const guardrailCheckRequestSchema = z.object({
 });
 
 const gameActionRequestSchema = z.object({
+  userId: z.string().min(1),
   action: z.string(),
   slotId: z.string().min(1),
   requestId: z.string().min(1),
@@ -77,6 +87,18 @@ app.post("/game/action", async (req, res) => {
   }
 
   const payload = parsed.data;
+
+  if (!userRateLimiter.tryConsume(payload.userId)) {
+    return res.status(429).json({
+      slotId: payload.slotId,
+      requestId: payload.requestId,
+      blocked: true,
+      reason: "RATE_LIMIT",
+      stage: "pre_guardrail",
+      narrative: getRateLimitMessage(payload.campaignLanguage),
+    });
+  }
+
   const decision = await checkInputGuardrail(payload.action, (input) =>
     runtimeClassifier.classify({
       campaignId: payload.campaignId,
