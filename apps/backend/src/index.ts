@@ -3,6 +3,7 @@ import { z } from "zod";
 import { config } from "./config.js";
 import { createRuntimeNarrator } from "./ai/runtime-narrator.js";
 import { InMemoryGameStore } from "./game/in-memory-game-store.js";
+import { SupabaseGameStore } from "./game/supabase-game-store.js";
 import { checkInputGuardrail } from "./guardrail/input-guardrail.js";
 import {
   getGuardrailBlockMessage,
@@ -34,7 +35,13 @@ const userRateLimiter = new UserRateLimiter({
   maxRequests: config.RATE_LIMIT_MAX_REQUESTS,
 });
 
-const gameStore = new InMemoryGameStore();
+const gameStore =
+  config.SUPABASE_URL && config.SUPABASE_SERVICE_ROLE_KEY
+    ? new SupabaseGameStore({
+        supabaseUrl: config.SUPABASE_URL,
+        serviceRoleKey: config.SUPABASE_SERVICE_ROLE_KEY,
+      })
+    : new InMemoryGameStore();
 
 const guardrailCheckRequestSchema = z.object({
   campaignId: z.string().min(1),
@@ -63,6 +70,7 @@ const gameNewRequestSchema = z.object({
 
 const gameStateQuerySchema = z.object({
   userId: z.string().min(1),
+  campaignId: z.string().min(1).optional(),
 });
 
 app.get("/health", (_req, res) => {
@@ -108,7 +116,7 @@ app.post("/game/action", async (req, res) => {
     return res.status(200).json({ ...cached, idempotentReplay: true });
   }
 
-  const state = gameStore.getOrCreateSlot(
+  const state = await gameStore.getOrCreateSlot(
     payload.userId,
     payload.slotId,
     payload.campaignId,
@@ -163,7 +171,11 @@ app.post("/game/action", async (req, res) => {
     campaignLanguage: payload.campaignLanguage,
   });
 
-  const updatedState = gameStore.applySuccessfulTurn(payload.userId, payload.slotId);
+  const updatedState = await gameStore.applySuccessfulTurn(
+    payload.userId,
+    payload.slotId,
+    payload.campaignId,
+  );
 
   const response = {
     slotId: payload.slotId,
@@ -180,7 +192,7 @@ app.post("/game/action", async (req, res) => {
   return res.status(200).json(response);
 });
 
-app.post("/game/new", (req, res) => {
+app.post("/game/new", async (req, res) => {
   const parsed = gameNewRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({
@@ -190,7 +202,7 @@ app.post("/game/new", (req, res) => {
   }
 
   const payload = parsed.data;
-  const state = gameStore.startNewGame(
+  const state = await gameStore.startNewGame(
     payload.userId,
     payload.slotId,
     payload.campaignId,
@@ -202,7 +214,7 @@ app.post("/game/new", (req, res) => {
   });
 });
 
-app.get("/game/state/:slotId", (req, res) => {
+app.get("/game/state/:slotId", async (req, res) => {
   const query = gameStateQuerySchema.safeParse(req.query);
   if (!query.success) {
     return res.status(400).json({
@@ -211,7 +223,11 @@ app.get("/game/state/:slotId", (req, res) => {
     });
   }
 
-  const state = gameStore.getSlot(query.data.userId, req.params.slotId);
+  const state = await gameStore.getSlot(
+    query.data.userId,
+    req.params.slotId,
+    query.data.campaignId,
+  );
   if (!state) {
     return res.status(404).json({ error: "SLOT_NOT_FOUND" });
   }

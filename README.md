@@ -10,7 +10,7 @@ Avventure testuali GenAI · React Native + Expo (Android-first)
 
 ## Stato attuale
 
-Fase: **orchestratore narratore multi-provider completato — in sviluppo state manager Supabase**.
+Fase: **orchestratore narratore multi-provider e state manager Supabase completati**.
 
 - [x] Toolchain: Node 20 LTS (nvm) + pnpm 10
 - [x] Monorepo pnpm (`apps/*`, `packages/*`)
@@ -29,7 +29,7 @@ Fase: **orchestratore narratore multi-provider completato — in sviluppo state 
   Supabase progetto creato e linkato via CLI (`supabase link`)
 - [x] Schema DB Supabase v1 core — migration `0001_core_schema.sql` + `0002_rls_policies.sql`
   applicate al progetto remoto (`supabase db push`)
-- [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con adapter Groq (retry/timeout), wiring runtime su endpoint `POST /guardrail/check` e endpoint `POST /game/action` con narratore runtime minimo + output guardrail + rate limiter su `user_id` (sliding window in-memory, upgrade path Redis). Restano i pezzi cloud-dipendenti: orchestratore narratore completo multi-provider e integrazione state manager DB, rate limiter Redis condiviso multi-istanza
+- [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con adapter Groq (retry/timeout), wiring runtime su endpoint `POST /guardrail/check` e endpoint `POST /game/action` con narratore runtime minimo + output guardrail + rate limiter su `user_id` (sliding window in-memory, upgrade path Redis). Resta come pezzo cloud-dipendente: rate limiter Redis condiviso multi-istanza. Pagina/stato di gioco salvato via SupabaseGameStore (con fallback locale).
 
 ---
 
@@ -179,7 +179,7 @@ Talebound/
 1. ~~**Account cloud**~~ ✅ Supabase progetto creato e linkato, `.env` compilato.
 2. ~~**Schema DB**~~ ✅ Migration `0001` + `0002` applicate (`supabase db push`).
 3. ~~**Orchestratore narratore completo**~~ ✅ Gemini → Groq → Cerebras + cache LRU (256 entry, TTL 5 min).
-4. **State manager DB** → collegare il game state a Supabase (sostituire in-memory).
+4. ~~**State manager DB**~~ ✅ Collegato il game state a Supabase con fallback locale in-memory.
 5. **Rate limiter Redis** → migrazione da sliding window in-memory a Redis shared
    multi-istanza.
 

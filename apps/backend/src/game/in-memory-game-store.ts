@@ -94,7 +94,7 @@ export class InMemoryGameStore {
   /**
    * Apply one successful turn to game state (minimal MVP progression).
    */
-  applySuccessfulTurn(userId: string, slotId: string): GameState {
+  applySuccessfulTurn(userId: string, slotId: string, _campaignId?: string): GameState {
     const key = this.slotKey(userId, slotId);
     const state = this.slots.get(key);
     if (!state) {
@@ -138,7 +138,7 @@ export class InMemoryGameStore {
   }
 
   /** Read slot state if present. */
-  getSlot(userId: string, slotId: string): GameState | undefined {
+  getSlot(userId: string, slotId: string, _campaignId?: string): GameState | undefined {
     return this.slots.get(this.slotKey(userId, slotId));
   }
 }
