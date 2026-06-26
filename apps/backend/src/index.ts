@@ -24,7 +24,9 @@ const runtimeClassifier = createRuntimeClassifier({
 });
 
 const runtimeNarrator = createRuntimeNarrator({
+  geminiApiKey: config.GEMINI_API_KEY,
   groqApiKey: config.GROQ_API_KEY,
+  cerebrasApiKey: config.CEREBRAS_API_KEY,
 });
 
 const userRateLimiter = new UserRateLimiter({
@@ -155,6 +157,7 @@ app.post("/game/action", async (req, res) => {
 
   const narrator = await runtimeNarrator.narrate({
     action: payload.action,
+    campaignId: payload.campaignId,
     campaignTitle: payload.campaignTitle,
     campaignGenre: payload.campaignGenre,
     campaignLanguage: payload.campaignLanguage,

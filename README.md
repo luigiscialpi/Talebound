@@ -10,7 +10,7 @@ Avventure testuali GenAI · React Native + Expo (Android-first)
 
 ## Stato attuale
 
-Fase: **setup cloud completato — in sviluppo orchestratore narratore multi-provider**.
+Fase: **orchestratore narratore multi-provider completato — in sviluppo state manager Supabase**.
 
 - [x] Toolchain: Node 20 LTS (nvm) + pnpm 10
 - [x] Monorepo pnpm (`apps/*`, `packages/*`)
@@ -178,8 +178,7 @@ Talebound/
 
 1. ~~**Account cloud**~~ ✅ Supabase progetto creato e linkato, `.env` compilato.
 2. ~~**Schema DB**~~ ✅ Migration `0001` + `0002` applicate (`supabase db push`).
-3. **Orchestratore narratore completo** → completare `/game/action` con fallback
-   multi-provider (Gemini → Groq → Cerebras + cache LRU), in corso.
+3. ~~**Orchestratore narratore completo**~~ ✅ Gemini → Groq → Cerebras + cache LRU (256 entry, TTL 5 min).
 4. **State manager DB** → collegare il game state a Supabase (sostituire in-memory).
 5. **Rate limiter Redis** → migrazione da sliding window in-memory a Redis shared
    multi-istanza.

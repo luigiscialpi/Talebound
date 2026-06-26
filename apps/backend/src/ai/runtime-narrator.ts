@@ -1,32 +1,34 @@
 import { checkOutputGuardrail } from "../guardrail/output-guardrail.js";
+import { NarratorCache } from "./narrator-cache.js";
+import { callGeminiNarrator } from "./providers/gemini-narrator.js";
+import { callGroqNarrator } from "./providers/groq-narrator.js";
+import { callCerebrasNarrator } from "./providers/cerebras-narrator.js";
+import type {
+  NarratorInput,
+  NarratorResult,
+  NarratorProviderResult,
+} from "./narrator-types.js";
 
-const DEFAULT_GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_GROQ_MODEL = "llama-3.1-8b-instant";
-const DEFAULT_TIMEOUT_MS = 1200;
+// Re-export types so existing callers that import from this module still work.
+export type { NarratorInput, NarratorResult };
 
-export interface NarratorInput {
+export interface RuntimeNarratorOptions {
+  geminiApiKey?: string;
+  groqApiKey?: string;
+  cerebrasApiKey?: string;
+  timeoutMs?: number;
+  /** Injected in tests to skip real HTTP calls. */
+  fetchFn?: typeof fetch;
+  /** Override cache instance (e.g. in tests). */
+  cache?: NarratorCache;
+}
+
+function buildPrompt(input: {
   action: string;
   campaignTitle: string;
   campaignGenre: string;
   campaignLanguage: string;
-}
-
-export interface RuntimeNarratorOptions {
-  groqApiKey?: string;
-  timeoutMs?: number;
-  endpoint?: string;
-  model?: string;
-  fetchFn?: typeof fetch;
-}
-
-export interface NarratorResult {
-  narrative: string;
-  provider: "groq" | "fallback";
-  outputGuardrailTriggered: boolean;
-  outputGuardrailPattern?: string;
-}
-
-function buildNarratorPrompt(input: NarratorInput): string {
+}): string {
   return [
     "Sei il Narratore di un'avventura testuale.",
     `Titolo campagna: ${input.campaignTitle}`,
@@ -45,88 +47,106 @@ function fallbackNarrative(language: string): string {
 }
 
 /**
- * Runtime narrator adapter for MVP.
+ * Multi-provider narrator orchestrator (doc §10).
  *
- * If GROQ_API_KEY is missing or provider call fails, returns a safe fallback text
- * so /game/action remains available while cloud setup is incomplete.
+ * Provider priority: Gemini -> Groq -> Cerebras -> static fallback.
+ * Each provider is skipped if its API key is absent.
+ * Results are cached by (campaignId, action) using an LRU+TTL cache.
  */
 export function createRuntimeNarrator(options: RuntimeNarratorOptions): {
-  narrate: (input: NarratorInput) => Promise<NarratorResult>;
+  narrate: (input: {
+    action: string;
+    campaignId: string;
+    campaignTitle: string;
+    campaignGenre: string;
+    campaignLanguage: string;
+  }) => Promise<NarratorResult>;
 } {
-  const fetchFn = options.fetchFn ?? fetch;
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const endpoint = options.endpoint ?? DEFAULT_GROQ_ENDPOINT;
-  const model = options.model ?? DEFAULT_GROQ_MODEL;
+  const cache = options.cache ?? new NarratorCache();
 
   return {
-    narrate: async (input: NarratorInput): Promise<NarratorResult> => {
-      if (!options.groqApiKey) {
-        return {
-          narrative: fallbackNarrative(input.campaignLanguage),
-          provider: "fallback",
-          outputGuardrailTriggered: false,
-        };
-      }
+    narrate: async (raw): Promise<NarratorResult> => {
+      const cacheKey = NarratorCache.buildKey(raw.campaignId, raw.action);
+      const cached = cache.get(cacheKey);
+      if (cached) return cached;
 
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      const prompt = buildPrompt(raw);
+      const narratorInput: NarratorInput = { prompt, ...raw };
 
-        const response = await fetchFn(endpoint, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${options.groqApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model,
-            messages: [{ role: "user", content: buildNarratorPrompt(input) }],
-            temperature: 0.7,
+      // Build the provider chain — only include providers whose keys are set.
+      const chain: Array<() => Promise<NarratorProviderResult | null>> = [];
+
+      if (options.geminiApiKey) {
+        chain.push(() =>
+          callGeminiNarrator(narratorInput, {
+            apiKey: options.geminiApiKey!,
+            timeoutMs: options.timeoutMs,
           }),
-          signal: controller.signal,
-        });
+        );
+      }
 
-        clearTimeout(timeout);
+      if (options.groqApiKey) {
+        chain.push(() =>
+          callGroqNarrator(narratorInput, {
+            apiKey: options.groqApiKey!,
+            timeoutMs: options.timeoutMs,
+            fetchFn: options.fetchFn,
+          }),
+        );
+      }
 
-        if (!response.ok) {
-          return {
-            narrative: fallbackNarrative(input.campaignLanguage),
-            provider: "fallback",
-            outputGuardrailTriggered: false,
-          };
-        }
+      if (options.cerebrasApiKey) {
+        chain.push(() =>
+          callCerebrasNarrator(narratorInput, {
+            apiKey: options.cerebrasApiKey!,
+            timeoutMs: options.timeoutMs,
+            fetchFn: options.fetchFn,
+          }),
+        );
+      }
 
-        const payload = (await response.json()) as {
-          choices?: Array<{ message?: { content?: unknown } }>;
-        };
-        const raw = payload.choices?.[0]?.message?.content;
-        const narrative =
-          typeof raw === "string" && raw.trim().length > 0
-            ? raw.trim()
-            : fallbackNarrative(input.campaignLanguage);
+      // Try each provider in order; stop at the first success.
+      let providerResult: NarratorProviderResult | null = null;
+      for (const call of chain) {
+        providerResult = await call();
+        if (providerResult) break;
+      }
 
-        const outputScan = checkOutputGuardrail(narrative);
-        if (outputScan.triggered) {
-          return {
-            narrative: fallbackNarrative(input.campaignLanguage),
-            provider: "fallback",
-            outputGuardrailTriggered: true,
-            outputGuardrailPattern: outputScan.patternMatched,
-          };
-        }
-
-        return {
-          narrative,
-          provider: "groq",
-          outputGuardrailTriggered: false,
-        };
-      } catch {
-        return {
-          narrative: fallbackNarrative(input.campaignLanguage),
+      // No provider succeeded -> static fallback.
+      if (!providerResult) {
+        const result: NarratorResult = {
+          narrative: fallbackNarrative(raw.campaignLanguage),
           provider: "fallback",
           outputGuardrailTriggered: false,
+          cached: false,
         };
+        // Do not cache the fallback — we want a real provider to succeed next time.
+        return result;
       }
+
+      // Output guardrail on the AI-generated text.
+      const outputScan = checkOutputGuardrail(providerResult.narrative);
+      if (outputScan.triggered) {
+        const result: NarratorResult = {
+          narrative: fallbackNarrative(raw.campaignLanguage),
+          provider: "fallback",
+          outputGuardrailTriggered: true,
+          outputGuardrailPattern: outputScan.patternMatched,
+          cached: false,
+        };
+        // Do not cache guardrail-blocked responses.
+        return result;
+      }
+
+      const result: NarratorResult = {
+        narrative: providerResult.narrative,
+        provider: providerResult.provider,
+        outputGuardrailTriggered: false,
+        cached: false,
+      };
+
+      cache.set(cacheKey, result);
+      return result;
     },
   };
 }

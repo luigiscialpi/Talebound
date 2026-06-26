@@ -6,6 +6,7 @@ import { createRuntimeNarrator } from "./runtime-narrator.js";
 function input() {
   return {
     action: "apro la porta",
+    campaignId: "test-campaign",
     campaignTitle: "La Torre",
     campaignGenre: "fantasy",
     campaignLanguage: "it",

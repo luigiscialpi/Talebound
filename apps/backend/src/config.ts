@@ -26,6 +26,7 @@ const configSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: optionalEnv.string(),
   GEMINI_API_KEY: optionalEnv.string(),
   GROQ_API_KEY: optionalEnv.string(),
+  CEREBRAS_API_KEY: optionalEnv.string(),
 
   // Sicurezza.
   HMAC_SECRET: z

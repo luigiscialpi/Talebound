@@ -13,7 +13,7 @@ export interface GameActionResponseSnapshot {
   narrative: string;
   reason?: string;
   stage?: string;
-  provider?: "groq" | "fallback";
+  provider?: "gemini" | "groq" | "cerebras" | "fallback";
   outputGuardrailTriggered?: boolean;
   outputGuardrailPattern?: string;
   gameState: GameState;
