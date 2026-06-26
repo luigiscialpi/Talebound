@@ -5,6 +5,7 @@ import { createRuntimeNarrator } from "./ai/runtime-narrator.js";
 import { InMemoryGameStore } from "./game/in-memory-game-store.js";
 import { SupabaseGameStore } from "./game/supabase-game-store.js";
 import { checkInputGuardrail } from "./guardrail/input-guardrail.js";
+import { compressHistory } from "./ai/headroom.js";
 import {
   getGuardrailBlockMessage,
   getRateLimitMessage,
@@ -163,19 +164,38 @@ app.post("/game/action", async (req, res) => {
     return res.status(200).json(response);
   }
 
+  const room = await gameStore.getRoom(payload.campaignId, state.currentRoomId);
+  const history = state.history ?? [];
+  const { compressedHistory } = compressHistory(history);
+
   const narrator = await runtimeNarrator.narrate({
     action: payload.action,
     campaignId: payload.campaignId,
     campaignTitle: payload.campaignTitle,
     campaignGenre: payload.campaignGenre,
     campaignLanguage: payload.campaignLanguage,
+    roomName: room?.name,
+    roomDescription: room?.descriptionCanonical,
+    roomItems: room?.itemsInitial,
+    health: state.health,
+    energy: state.energy,
+    inventory: state.inventory,
+    compressedHistory,
   });
 
-  const updatedState = await gameStore.applySuccessfulTurn(
-    payload.userId,
-    payload.slotId,
-    payload.campaignId,
-  );
+  let updatedState = state;
+  if (!narrator.outputGuardrailTriggered) {
+    const newHistory = [...history, { action: payload.action, narrative: narrator.narrative }];
+    if (newHistory.length > 10) {
+      newHistory.shift();
+    }
+    updatedState = await gameStore.applySuccessfulTurn(
+      payload.userId,
+      payload.slotId,
+      payload.campaignId,
+      newHistory,
+    );
+  }
 
   const response = {
     slotId: payload.slotId,

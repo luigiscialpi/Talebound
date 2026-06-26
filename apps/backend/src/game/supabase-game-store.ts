@@ -139,12 +139,49 @@ export class SupabaseGameStore {
   }
 
   /**
+   * Fetch room data from the database.
+   */
+  async getRoom(campaignId: string, roomId: string): Promise<any | undefined> {
+    if (!isValidUuid(campaignId) || !isValidUuid(roomId)) {
+      console.warn("[supabase-game-store] getRoom: invalid UUIDs", { campaignId, roomId });
+      return undefined;
+    }
+    const { data, error } = await this.client
+      .from("rooms")
+      .select("*")
+      .eq("campaign_id", campaignId)
+      .eq("id", roomId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[supabase-game-store] getRoom error:", error.message);
+      return undefined;
+    }
+
+    if (!data) return undefined;
+
+    return {
+      id: data.id,
+      campaignId: data.campaign_id,
+      name: data.name,
+      descriptionCanonical: data.description_canonical,
+      descriptionStateOverride: data.description_state_override,
+      connections: data.connections,
+      musicMood: data.music_mood,
+      itemsInitial: data.items_initial,
+      firstVisitText: data.first_visit_text,
+      tags: data.tags,
+    };
+  }
+
+  /**
    * Increment turnNumber, decrement energy, persist to autosave_json.
    */
   async applySuccessfulTurn(
     userId: string,
     slotId: string,
     campaignId?: string,
+    history?: Array<{ action: string; narrative: string }>,
   ): Promise<GameState> {
     if (!isValidUuid(userId)) {
       console.warn("[supabase-game-store] applySuccessfulTurn: invalid user UUID", { userId });
@@ -180,6 +217,7 @@ export class SupabaseGameStore {
       ...current,
       turnNumber: current.turnNumber + 1,
       energy: Math.max(0, current.energy - 1),
+      history,
     };
 
     const matchedCampaignId = current.campaignId;

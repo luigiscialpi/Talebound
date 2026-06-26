@@ -30,6 +30,12 @@ export interface Room {
   tags: string[];
 }
 
+/** Turn entry in game history. */
+export interface TurnHistoryEntry {
+  action: string;
+  narrative: string;
+}
+
 /** Stato di gioco persistito per ogni save slot (doc §9). */
 export interface GameState {
   campaignId: string;
@@ -40,4 +46,6 @@ export interface GameState {
   visitedRoomIds: string[];
   turnNumber: number;
   endingsReached: string[];
+  history?: TurnHistoryEntry[];
+  summary?: string;
 }

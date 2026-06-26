@@ -92,9 +92,32 @@ export class InMemoryGameStore {
   }
 
   /**
+   * Get room metadata (mock for in-memory store).
+   */
+  getRoom(campaignId: string, roomId: string): any {
+    return {
+      id: roomId,
+      campaignId,
+      name: "Atrio del Tempio",
+      descriptionCanonical: "Ti trovi nell'atrio di un antico tempio dimenticato. Le pareti sono coperte di rampicanti e geroglifici sbiaditi. C'è una sola uscita visibile a nord, bloccata da una pesante grata di ferro.",
+      descriptionStateOverride: null,
+      connections: { north: "room-next" },
+      musicMood: "calm",
+      itemsInitial: ["chiave_ruggine"],
+      firstVisitText: "Benvenuto nel tempio.",
+      tags: [],
+    };
+  }
+
+  /**
    * Apply one successful turn to game state (minimal MVP progression).
    */
-  applySuccessfulTurn(userId: string, slotId: string, _campaignId?: string): GameState {
+  applySuccessfulTurn(
+    userId: string,
+    slotId: string,
+    _campaignId?: string,
+    history?: Array<{ action: string; narrative: string }>,
+  ): GameState {
     const key = this.slotKey(userId, slotId);
     const state = this.slots.get(key);
     if (!state) {
@@ -105,6 +128,7 @@ export class InMemoryGameStore {
       ...state,
       turnNumber: state.turnNumber + 1,
       energy: Math.max(0, state.energy - 1),
+      history,
     };
     this.slots.set(key, next);
     return next;

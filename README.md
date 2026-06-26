@@ -10,7 +10,9 @@ Avventure testuali GenAI · React Native + Expo (Android-first)
 
 ## Stato attuale
 
-Fase: **orchestratore narratore multi-provider e state manager Supabase completati**.
+Fase: **orchestratore narratore completo (integrato con DB + Headroom) e state manager Supabase completati**.
+
+---
 
 - [x] Toolchain: Node 20 LTS (nvm) + pnpm 10
 - [x] Monorepo pnpm (`apps/*`, `packages/*`)
@@ -29,7 +31,8 @@ Fase: **orchestratore narratore multi-provider e state manager Supabase completa
   Supabase progetto creato e linkato via CLI (`supabase link`)
 - [x] Schema DB Supabase v1 core — migration `0001_core_schema.sql` + `0002_rls_policies.sql`
   applicate al progetto remoto (`supabase db push`)
-- [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con adapter Groq (retry/timeout), wiring runtime su endpoint `POST /guardrail/check` e endpoint `POST /game/action` con narratore runtime minimo + output guardrail + rate limiter su `user_id` (sliding window in-memory, upgrade path Redis). Resta come pezzo cloud-dipendente: rate limiter Redis condiviso multi-istanza. Pagina/stato di gioco salvato via SupabaseGameStore (con fallback locale).
+- [x] Integrazione Narratore AI completo (§10) con caricamento stanze reali dal DB, regole di sicurezza L1 e compressione dello storico turni ("Headroom", con warning su ratio >0.9)
+- [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con adapter Groq (retry/timeout), wiring runtime su endpoint `POST /guardrail/check` e endpoint `POST /game/action` con narratore completo + output guardrail + rate limiter su `user_id` (sliding window in-memory, upgrade path Redis). Resta come pezzo cloud-dipendente: rate limiter Redis condiviso multi-istanza. Pagina/stato di gioco salvato via SupabaseGameStore (con fallback locale).
 
 ---
 
