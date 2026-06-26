@@ -10,7 +10,7 @@ Avventure testuali GenAI · React Native + Expo (Android-first)
 
 ## Stato attuale
 
-Fase: **auth JWT completa (backend + mobile) — pronto per il flusso di gioco end-to-end**.
+Fase: **flusso di gioco end-to-end completato — login → home → gioco con narratore AI**.
 
 ---
 
@@ -35,6 +35,7 @@ Fase: **auth JWT completa (backend + mobile) — pronto per il flusso di gioco e
 - [x] Seeding DB: migrazione `0003_demo_campaign.sql` — campagna demo "La Cripta dei Sussurri" con 10 stanze (applicata con `supabase db push`)
 - [x] Auth JWT (§7): middleware `authMiddleware` (`jose`, HS256) — endpoint `/game/*` protetti; `userId` estratto da `req.user.sub` (anti-spoofing); bypass mode in dev locale se `SUPABASE_JWT_SECRET` è assente (121/121 test passati)
 - [x] Auth client mobile: `AuthProvider` + `useAuth` hook, `expo-secure-store` per session persistence, schermata login email/password, guard di navigazione in `_layout.tsx` (redirect unauth -> login); `useAccessToken()` per passare il JWT alle API backend
+- [x] Flusso di gioco end-to-end: `GameClient` (HTTP + JWT), `useGameState` hook, struttura `(home)` + `(game)` da doc §4, schermate `HomeScreen` (lista campagne), `PlayScreen` (narrativa + input + stats) con componenti `NarrativeScroll`, `CommandInput`, `StatsPanel`
 - [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con adapter Groq (retry/timeout), wiring runtime su endpoint `POST /guardrail/check` e endpoint `POST /game/action` con narratore completo + output guardrail + rate limiter su `user_id` (sliding window in-memory, upgrade path Redis). Resta come pezzo cloud-dipendente: rate limiter Redis condiviso multi-istanza. Pagina/stato di gioco salvato via SupabaseGameStore (con fallback locale).
 
 ---
@@ -191,8 +192,10 @@ Talebound/
 5. ~~**Seeding DB**~~ ✅ Campagna demo "La Cripta dei Sussurri" (10 stanze) in `0003_demo_campaign.sql`.
 6. ~~**Auth JWT backend**~~ ✅ Middleware `authMiddleware` (jose/HS256) — `/game/*` protetti, `userId` anti-spoofing.
 7. ~~**Auth client mobile**~~ ✅ `AuthProvider` + `useAuth`, login screen, `expo-secure-store`, `useAccessToken()` per le chiamate API.
-8. **Flusso di gioco end-to-end** → schermata principale di gioco (`app/index.tsx`) che usa `useAccessToken()` per chiamare `POST /game/action`, visualizza la narrativa e aggiorna lo stato UI.
+8. ~~**Flusso di gioco end-to-end**~~ ✅ `GameClient` + `useGameState` + `(home)/index` + `(game)/play` + componenti (`NarrativeScroll`, `CommandInput`, `StatsPanel`).
 9. **Rate limiter Redis** → migrazione da sliding window in-memory a Redis shared multi-istanza (previsto in fase successiva).
+10. **Google OAuth** → secondo metodo di login (doc §3).
+11. **Musica adattiva** → `expo-av` con crossfade su `musicMood` della stanza (doc §12).
 
 ---
 

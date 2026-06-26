@@ -25,7 +25,8 @@
     },
     "extra": {
       "supabaseUrl": "https://fouzmnpeyolfilmmldzd.supabase.co",
-      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvdXptbnBleW9sZmlsbW1sZHpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NzIxNDgsImV4cCI6MjA5ODA0ODE0OH0.eOuSqBqFFuMD-ApJpuR2xt8FeCGaEdoMxLSgV_QyGqU"
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvdXptbnBleW9sZmlsbW1sZHpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NzIxNDgsImV4cCI6MjA5ODA0ODE0OH0.eOuSqBqFFuMD-ApJpuR2xt8FeCGaEdoMxLSgV_QyGqU",
+      "backendUrl": "http://10.0.2.2:3000"
     }
   }
 }
