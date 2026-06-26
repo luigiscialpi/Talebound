@@ -3,6 +3,7 @@ import type { GameState } from "@talebound/shared";
 import type {
   GameActionResponseSnapshot,
 } from "./in-memory-game-store.js";
+import ws from "ws";
 
 // ---------------------------------------------------------------------------
 // Re-export the snapshot type so callers can import from either store module.
@@ -46,6 +47,7 @@ export class SupabaseGameStore {
   constructor(options: SupabaseGameStoreOptions) {
     this.client = createClient(options.supabaseUrl, options.serviceRoleKey, {
       auth: { persistSession: false },
+      realtime: { transport: ws as any },
     });
     this.now = options.now ?? Date.now;
     this.idempotencyTtlMs = options.idempotencyTtlMs ?? 24 * 60 * 60 * 1000;
@@ -310,5 +312,12 @@ export class SupabaseGameStore {
   ): GameActionResponseSnapshot | undefined {
     this.pruneIdempotency();
     return this.idempotency.get(this.idemKey(userId, requestId))?.response;
+  }
+
+  async saveAiLog(logData: Record<string, any>): Promise<void> {
+    const { error } = await this.client.from("ai_logs").insert(logData);
+    if (error) {
+      console.error("[supabase-game-store] saveAiLog error:", error.message);
+    }
   }
 }

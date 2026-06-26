@@ -3,6 +3,7 @@ import { parseClassifierResponse } from "./classifier-parser.js";
 import { ClassifierCircuitBreaker } from "./classifier-circuit-breaker.js";
 import { ClassifierLRUCache, getCacheKey } from "./classifier-cache.js";
 import type { ClassifierPromptInput } from "./classifier-groq.js";
+import { logger } from "../utils/logger.js";
 
 export interface ClassifierServiceContext extends ClassifierPromptInput {
   campaignId: string;
@@ -46,6 +47,7 @@ export class ClassifierService {
     }
 
     if (!this.circuitBreaker.canAttempt()) {
+      logger.warn({ event: "classifier_breaker_open" }, "Classifier breaker open, blocking request");
       return "PARSE_ERROR";
     }
 
@@ -55,14 +57,23 @@ export class ClassifierService {
 
       if (parsed === "PARSE_ERROR") {
         this.circuitBreaker.recordFailure();
+        logger.warn({
+          event: "classifier_parse_error",
+          rawResponse: raw,
+        }, "Failed to parse classifier response");
         return "PARSE_ERROR";
       }
 
       this.circuitBreaker.recordSuccess();
       this.cache.set(key, parsed);
       return parsed;
-    } catch {
+    } catch (err: any) {
       this.circuitBreaker.recordFailure();
+      logger.error({
+        event: "classifier_service_error",
+        error: err?.message || err,
+        stack: err?.stack,
+      }, "Classifier service error");
       return "PARSE_ERROR";
     }
   }

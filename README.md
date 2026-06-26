@@ -33,7 +33,7 @@ Fase: **flusso di gioco end-to-end completato — login → home → gioco con n
   applicate al progetto remoto (`supabase db push`)
 - [x] Integrazione Narratore AI completo (§10) con caricamento stanze reali dal DB, regole di sicurezza L1 e compressione dello storico turni ("Headroom", con warning su ratio >0.9)
 - [x] Seeding DB: migrazione `0003_demo_campaign.sql` — campagna demo "La Cripta dei Sussurri" con 10 stanze (applicata con `supabase db push`)
-- [x] Auth JWT (§7): middleware `authMiddleware` (`jose`, HS256) — endpoint `/game/*` protetti; `userId` estratto da `req.user.sub` (anti-spoofing); bypass mode in dev locale se `SUPABASE_JWT_SECRET` è assente (121/121 test passati)
+- [x] Auth JWT (§7): middleware `authMiddleware` (`jose`) con supporto dinamico ad algoritmi asimmetrici `ES256` (tramite JWKS remoto Supabase `/auth/v1/.well-known/jwks.json`) e simmetrici `HS256` (via secret locale `SUPABASE_JWT_SECRET`) — endpoint `/game/*` protetti; `userId` estratto da `req.user.sub` (121/121 test passati)
 - [x] Auth client mobile: `AuthProvider` + `useAuth` hook, `expo-secure-store` per session persistence, schermata login email/password, guard di navigazione in `_layout.tsx` (redirect unauth -> login); `useAccessToken()` per passare il JWT alle API backend
 - [x] Flusso di gioco end-to-end: `GameClient` (HTTP + JWT), `useGameState` hook, struttura `(home)` + `(game)` da doc §4, schermate `HomeScreen` (lista campagne), `PlayScreen` (narrativa + input + stats) con componenti `NarrativeScroll`, `CommandInput`, `StatsPanel`
 - [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con adapter Groq (retry/timeout), wiring runtime su endpoint `POST /guardrail/check` e endpoint `POST /game/action` con narratore completo + output guardrail + rate limiter su `user_id` (sliding window in-memory, upgrade path Redis). Resta come pezzo cloud-dipendente: rate limiter Redis condiviso multi-istanza. Pagina/stato di gioco salvato via SupabaseGameStore (con fallback locale).
@@ -66,8 +66,8 @@ pnpm android
 
 # Backend (in un altro terminale)
 cp apps/backend/.env.example apps/backend/.env   # poi compila i valori
-# Il backend NON carica .env da solo: sorgilo prima di avviare
-set -a && source apps/backend/.env && set +a && pnpm backend:dev
+pnpm backend:dev
+
 ```
 
 > **Chiavi AI minime per il runtime**: basta `GROQ_API_KEY` (free, da
@@ -174,8 +174,7 @@ Talebound/
 - **Reanimated 4**: il plugin Babel è `react-native-worklets/plugin`
   (non `react-native-reanimated/plugin`).
 - **Secret**: mai committare `.env`. Solo `.env.example` è versionato.
-- **Backend non carica `.env` da solo**: va sorgento prima dell'avvio
-  (`set -a && source apps/backend/.env && set +a && pnpm backend:dev`).
+- **Backend carica `.env` automaticamente**: il comando `pnpm backend:dev` usa internamente `--env-file=.env`, quindi non serve sorgere il file a mano.
 - **Processo backend orfano su `:3000`**: chiudere il terminale non sempre uccide
   il child node di `tsx watch`. Se edit/riavvii non hanno effetto (il server
   risponde con codice/config vecchi), cerca l'orfano con

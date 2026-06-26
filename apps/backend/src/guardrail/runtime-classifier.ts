@@ -28,6 +28,7 @@ export interface RuntimeClassifierContext extends ClassifierPromptInput {
  */
 export function createRuntimeClassifier(options: RuntimeClassifierOptions): {
   classify: (context: RuntimeClassifierContext) => Promise<ClassifierResult>;
+  cache: ClassifierLRUCache;
 } {
   const cache = new ClassifierLRUCache();
   const breaker = new ClassifierCircuitBreaker({
@@ -53,5 +54,6 @@ export function createRuntimeClassifier(options: RuntimeClassifierOptions): {
 
   return {
     classify: (context) => service.classify(context),
+    cache,
   };
 }

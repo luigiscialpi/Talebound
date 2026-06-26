@@ -165,4 +165,8 @@ export class InMemoryGameStore {
   getSlot(userId: string, slotId: string, _campaignId?: string): GameState | undefined {
     return this.slots.get(this.slotKey(userId, slotId));
   }
+
+  async saveAiLog(_logData: Record<string, any>): Promise<void> {
+    // No-op for in-memory store.
+  }
 }
