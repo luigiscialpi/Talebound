@@ -10,7 +10,7 @@ Avventure testuali GenAI · React Native + Expo (Android-first)
 
 ## Stato attuale
 
-Fase: **scaffolding del monorepo completato e verificato**.
+Fase: **setup cloud completato — in sviluppo orchestratore narratore multi-provider**.
 
 - [x] Toolchain: Node 20 LTS (nvm) + pnpm 10
 - [x] Monorepo pnpm (`apps/*`, `packages/*`)
@@ -25,9 +25,10 @@ Fase: **scaffolding del monorepo completato e verificato**.
 - [x] Emulatore Android Studio + prima dev build (Pixel 10)
 - [x] Provider AI runtime: **Groq** configurato e verificato end-to-end
   (classificatore L2 + narratore runtime rispondono live; `provider:"groq"`)
-- [~] Account cloud (Supabase, Firebase, AI keys) + `.env` — Groq attivo, restano
-  Gemini/Cerebras (multi-provider) e Supabase/Firebase
-- [~] Schema DB Supabase v1 core (migration + RLS scritte, da applicare al progetto)
+- [x] Account cloud (Supabase, Firebase, AI keys) + `.env` — Groq + Gemini attivi;
+  Supabase progetto creato e linkato via CLI (`supabase link`)
+- [x] Schema DB Supabase v1 core — migration `0001_core_schema.sql` + `0002_rls_policies.sql`
+  applicate al progetto remoto (`supabase db push`)
 - [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con adapter Groq (retry/timeout), wiring runtime su endpoint `POST /guardrail/check` e endpoint `POST /game/action` con narratore runtime minimo + output guardrail + rate limiter su `user_id` (sliding window in-memory, upgrade path Redis). Restano i pezzi cloud-dipendenti: orchestratore narratore completo multi-provider e integrazione state manager DB, rate limiter Redis condiviso multi-istanza
 
 ---
@@ -175,16 +176,13 @@ Talebound/
 
 ## Prossimi passi suggeriti
 
-1. **Account cloud** → progetti Supabase + Firebase, restanti API key AI
-   (Gemini/Cerebras; Groq già attivo), compilare `apps/backend/.env`.
-2. **Schema DB** → migration v1 core in `supabase/migrations/` (users, campaigns,
-   rooms, room_translations, save_slots, ai_logs + RLS). Da applicare al progetto
-   Supabase (step 2). Tabelle v2/v3 (community, co-op, world-builder) differite.
-3. **Guardrail cloud-dipendente** → dopo i cloud key (step 1): completare `/game/action`
-  con orchestratore narratore completo (Gemini -> Groq -> Cerebras + cache),
-  integrazione state manager DB, migrazione rate limiter su `user_id` a Redis
-  shared (oggi in-memory single-instance),
-  observability/alerting reali.
+1. ~~**Account cloud**~~ ✅ Supabase progetto creato e linkato, `.env` compilato.
+2. ~~**Schema DB**~~ ✅ Migration `0001` + `0002` applicate (`supabase db push`).
+3. **Orchestratore narratore completo** → completare `/game/action` con fallback
+   multi-provider (Gemini → Groq → Cerebras + cache LRU), in corso.
+4. **State manager DB** → collegare il game state a Supabase (sostituire in-memory).
+5. **Rate limiter Redis** → migrazione da sliding window in-memory a Redis shared
+   multi-istanza.
 
 ---
 
@@ -193,7 +191,7 @@ Talebound/
 Il progetto usa **skill** (conoscenza di dominio, attivata automaticamente dal
 contesto) e **agenti** (modalità di lavoro che selezioni manualmente).
 
-Skill (`.github/skills/`):
+Skill (`.github/skills/`) oppure (`.agent/skills/`):
 
 Skill di progetto:
 
