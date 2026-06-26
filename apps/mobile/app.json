@@ -17,10 +17,15 @@
       "bundleIdentifier": "com.talebound.app"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "supabaseUrl": "https://fouzmnpeyolfilmmldzd.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvdXptbnBleW9sZmlsbW1sZHpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NzIxNDgsImV4cCI6MjA5ODA0ODE0OH0.eOuSqBqFFuMD-ApJpuR2xt8FeCGaEdoMxLSgV_QyGqU"
     }
   }
 }
