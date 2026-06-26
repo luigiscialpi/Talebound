@@ -10,7 +10,7 @@ Avventure testuali GenAI · React Native + Expo (Android-first)
 
 ## Stato attuale
 
-Fase: **orchestratore narratore completo (integrato con DB + Headroom) e state manager Supabase completati**.
+Fase: **auth JWT completata — endpoint `/game/*` protetti, client mobile da collegare**.
 
 ---
 
@@ -32,6 +32,8 @@ Fase: **orchestratore narratore completo (integrato con DB + Headroom) e state m
 - [x] Schema DB Supabase v1 core — migration `0001_core_schema.sql` + `0002_rls_policies.sql`
   applicate al progetto remoto (`supabase db push`)
 - [x] Integrazione Narratore AI completo (§10) con caricamento stanze reali dal DB, regole di sicurezza L1 e compressione dello storico turni ("Headroom", con warning su ratio >0.9)
+- [x] Seeding DB: migrazione `0003_demo_campaign.sql` — campagna demo "La Cripta dei Sussurri" con 10 stanze (applicata con `supabase db push`)
+- [x] Auth JWT (§7): middleware `authMiddleware` (`jose`, HS256) — endpoint `/game/*` protetti; `userId` estratto da `req.user.sub` (anti-spoofing); bypass mode in dev locale se `SUPABASE_JWT_SECRET` è assente (121/121 test passati)
 - [~] Guardrail logica pura (TDD): L0 (§2), output (§5), sanitizer canonical (§6), parser L2 fail-closed (§4), orchestratore input L0→L2 fail-closed, sanitizer titolo campagna (§4), cache classificatore LRU+TTL (`getCacheKey`, §4), circuit breaker classificatore (§9), servizio classificatore con adapter Groq (retry/timeout), wiring runtime su endpoint `POST /guardrail/check` e endpoint `POST /game/action` con narratore completo + output guardrail + rate limiter su `user_id` (sliding window in-memory, upgrade path Redis). Resta come pezzo cloud-dipendente: rate limiter Redis condiviso multi-istanza. Pagina/stato di gioco salvato via SupabaseGameStore (con fallback locale).
 
 ---
@@ -83,12 +85,12 @@ set -a && source apps/backend/.env && set +a && pnpm backend:dev
 
 Endpoint backend runtime disponibili (MVP scaffolding):
 
-| Metodo | Endpoint | Note |
-|---|---|---|
-| `POST` | `/guardrail/check` | Solo decisione guardrail input |
-| `POST` | `/game/new` | Inizializza/resetta slot in-memory |
-| `GET` | `/game/state/:slotId?userId=...` | Legge stato slot in-memory |
-| `POST` | `/game/action` | Guardrail + narratore runtime + update stato + idempotency |
+| Metodo | Endpoint | Auth | Note |
+|---|---|---|---|
+| `POST` | `/guardrail/check` | ❌ pubblica | Solo decisione guardrail input |
+| `POST` | `/game/new` | ✅ Bearer JWT | Inizializza/resetta slot di gioco |
+| `GET` | `/game/state/:slotId` | ✅ Bearer JWT | Legge stato slot (`campaignId` opzionale in query) |
+| `POST` | `/game/action` | ✅ Bearer JWT | Guardrail + narratore runtime + update stato + idempotency |
 
 Smoke test guardrail runtime (con backend avviato):
 
@@ -104,29 +106,31 @@ curl -sS -X POST http://localhost:3000/guardrail/check \
   }'
 ```
 
-Smoke test endpoint di gioco (guardrail + narratore runtime minimo):
+Smoke test endpoint di gioco (richiede `Bearer <token>`):
 
 ```bash
+# In dev locale senza SUPABASE_JWT_SECRET: qualsiasi token decodificabile è accettato
+# (bypass mode). In produzione serve un JWT Supabase valido.
+TOKEN="<jwt-supabase-o-dev-token>"
+
 curl -sS -X POST http://localhost:3000/game/action \
   -H 'content-type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{
-    "userId":"user-1",
     "action":"apro la porta",
     "slotId":"slot-1",
     "requestId":"req-1",
-    "campaignId":"demo-1",
-    "campaignTitle":"La Torre Nera",
+    "campaignId":"c1111111-1111-1111-1111-111111111111",
+    "campaignTitle":"La Cripta dei Sussurri",
     "campaignGenre":"fantasy",
     "campaignLanguage":"it"
   }'
 ```
 
-Note `/game/action`:
-
-- `requestId` e idempotente per `userId`: retry con lo stesso `requestId`
-  restituisce la stessa risposta (`idempotentReplay: true`) senza doppio turno.
-- Stato slot attuale e in-memory (persistenza temporanea): verra sostituito da
-  StateManager su Supabase nelle fasi cloud successive.
+> **Nota**: `userId` non va più nel body — viene estratto dal JWT (`sub` claim).
+> `requestId` è idempotente per utente: un retry con lo stesso ID restituisce
+> la risposta cached (`idempotentReplay: true`) senza rieseguire il turno.
+> `campaignId` demo disponibile dopo `supabase db push`: `c1111111-1111-1111-1111-111111111111`.
 
 ---
 
@@ -183,8 +187,11 @@ Talebound/
 2. ~~**Schema DB**~~ ✅ Migration `0001` + `0002` applicate (`supabase db push`).
 3. ~~**Orchestratore narratore completo**~~ ✅ Gemini → Groq → Cerebras + cache LRU (256 entry, TTL 5 min).
 4. ~~**State manager DB**~~ ✅ Collegato il game state a Supabase con fallback locale in-memory.
-5. **Rate limiter Redis** → migrazione da sliding window in-memory a Redis shared
-   multi-istanza.
+5. ~~**Seeding DB**~~ ✅ Campagna demo "La Cripta dei Sussurri" (10 stanze) in `0003_demo_campaign.sql`.
+6. ~~**Auth JWT backend**~~ ✅ Middleware `authMiddleware` (jose/HS256) — `/game/*` protetti, `userId` anti-spoofing.
+7. **Auth client mobile** → modulo di autenticazione in `apps/mobile`: login email/password via `@supabase/supabase-js`, gestione sessione (token refresh), esposizione del JWT verso le chiamate API backend.
+8. **Rate limiter Redis** → migrazione da sliding window in-memory a Redis shared
+   multi-istanza (previsto in fase successiva).
 
 ---
 

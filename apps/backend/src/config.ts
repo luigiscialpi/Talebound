@@ -24,6 +24,7 @@ const configSchema = z.object({
   // Servizi esterni (compilare in .env prima di usare le relative feature).
   SUPABASE_URL: optionalEnv.url(),
   SUPABASE_SERVICE_ROLE_KEY: optionalEnv.string(),
+  SUPABASE_JWT_SECRET: optionalEnv.string(),
   GEMINI_API_KEY: optionalEnv.string(),
   GROQ_API_KEY: optionalEnv.string(),
   CEREBRAS_API_KEY: optionalEnv.string(),

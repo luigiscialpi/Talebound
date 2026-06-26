@@ -12,6 +12,7 @@ import {
 } from "./guardrail/block-messages.js";
 import { createRuntimeClassifier } from "./guardrail/runtime-classifier.js";
 import { UserRateLimiter } from "./guardrail/user-rate-limiter.js";
+import { authMiddleware } from "./middleware/auth-middleware.js";
 
 const app = express();
 app.use(express.json());
@@ -53,7 +54,8 @@ const guardrailCheckRequestSchema = z.object({
 });
 
 const gameActionRequestSchema = z.object({
-  userId: z.string().min(1),
+  // userId is NOT accepted from the body: it is extracted from the verified JWT
+  // (req.user.sub) to prevent spoofing.
   action: z.string(),
   slotId: z.string().min(1),
   requestId: z.string().min(1),
@@ -64,19 +66,21 @@ const gameActionRequestSchema = z.object({
 });
 
 const gameNewRequestSchema = z.object({
-  userId: z.string().min(1),
   slotId: z.string().min(1),
   campaignId: z.string().min(1),
 });
 
 const gameStateQuerySchema = z.object({
-  userId: z.string().min(1),
   campaignId: z.string().min(1).optional(),
 });
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "talebound-backend" });
 });
+
+// All /game/* routes require a valid Supabase JWT.
+const gameRouter = express.Router();
+gameRouter.use(authMiddleware);
 
 app.post("/guardrail/check", async (req, res) => {
   const parsed = guardrailCheckRequestSchema.safeParse(req.body);
@@ -101,7 +105,13 @@ app.post("/guardrail/check", async (req, res) => {
   return res.json({ decision });
 });
 
-app.post("/game/action", async (req, res) => {
+gameRouter.post("/action", async (req, res) => {
+  // userId is sourced from the verified JWT claim, not from the request body.
+  const userId = req.user?.sub;
+  if (!userId) {
+    return res.status(401).json({ error: "UNAUTHORIZED", message: "Missing user claim" });
+  }
+
   const parsed = gameActionRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({
@@ -112,18 +122,18 @@ app.post("/game/action", async (req, res) => {
 
   const payload = parsed.data;
 
-  const cached = gameStore.getIdempotentResponse(payload.userId, payload.requestId);
+  const cached = gameStore.getIdempotentResponse(userId, payload.requestId);
   if (cached) {
     return res.status(200).json({ ...cached, idempotentReplay: true });
   }
 
   const state = await gameStore.getOrCreateSlot(
-    payload.userId,
+    userId,
     payload.slotId,
     payload.campaignId,
   );
 
-  if (!userRateLimiter.tryConsume(payload.userId)) {
+  if (!userRateLimiter.tryConsume(userId)) {
     const response = {
       slotId: payload.slotId,
       requestId: payload.requestId,
@@ -133,7 +143,7 @@ app.post("/game/action", async (req, res) => {
       narrative: getRateLimitMessage(payload.campaignLanguage),
       gameState: state,
     };
-    gameStore.saveIdempotentResponse(payload.userId, payload.requestId, response);
+    gameStore.saveIdempotentResponse(userId, payload.requestId, response);
     return res.status(429).json(response);
   }
 
@@ -160,7 +170,7 @@ app.post("/game/action", async (req, res) => {
       ),
       gameState: state,
     };
-    gameStore.saveIdempotentResponse(payload.userId, payload.requestId, response);
+    gameStore.saveIdempotentResponse(userId, payload.requestId, response);
     return res.status(200).json(response);
   }
 
@@ -190,7 +200,7 @@ app.post("/game/action", async (req, res) => {
       newHistory.shift();
     }
     updatedState = await gameStore.applySuccessfulTurn(
-      payload.userId,
+      userId,
       payload.slotId,
       payload.campaignId,
       newHistory,
@@ -208,11 +218,16 @@ app.post("/game/action", async (req, res) => {
     gameState: updatedState,
   };
 
-  gameStore.saveIdempotentResponse(payload.userId, payload.requestId, response);
+  gameStore.saveIdempotentResponse(userId, payload.requestId, response);
   return res.status(200).json(response);
 });
 
-app.post("/game/new", async (req, res) => {
+gameRouter.post("/new", async (req, res) => {
+  const userId = req.user?.sub;
+  if (!userId) {
+    return res.status(401).json({ error: "UNAUTHORIZED", message: "Missing user claim" });
+  }
+
   const parsed = gameNewRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({
@@ -223,7 +238,7 @@ app.post("/game/new", async (req, res) => {
 
   const payload = parsed.data;
   const state = await gameStore.startNewGame(
-    payload.userId,
+    userId,
     payload.slotId,
     payload.campaignId,
   );
@@ -234,7 +249,12 @@ app.post("/game/new", async (req, res) => {
   });
 });
 
-app.get("/game/state/:slotId", async (req, res) => {
+gameRouter.get("/state/:slotId", async (req, res) => {
+  const userId = req.user?.sub;
+  if (!userId) {
+    return res.status(401).json({ error: "UNAUTHORIZED", message: "Missing user claim" });
+  }
+
   const query = gameStateQuerySchema.safeParse(req.query);
   if (!query.success) {
     return res.status(400).json({
@@ -244,7 +264,7 @@ app.get("/game/state/:slotId", async (req, res) => {
   }
 
   const state = await gameStore.getSlot(
-    query.data.userId,
+    userId,
     req.params.slotId,
     query.data.campaignId,
   );
@@ -257,6 +277,9 @@ app.get("/game/state/:slotId", async (req, res) => {
     gameState: state,
   });
 });
+
+// Mount the authenticated game router.
+app.use("/game", gameRouter);
 
 const server = app.listen(config.PORT, () => {
   console.log(`Talebound backend in ascolto su :${config.PORT}`);
